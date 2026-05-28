@@ -1,0 +1,9 @@
+{
+  "required": true,
+  "package": "net.berlogacraft.fabric.hdskins.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "client": ["SkinTextureDownloaderMixin"],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
