@@ -1,0 +1,46 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Download dependencies
+        run: |
+          mkdir -p deps
+          MC_VERSION_URL=$(curl -s https://piston-meta.mojang.com/mc/game/version_manifest_v2.json | jq -r '.versions[] | select(.id == "26.1.2") | .url')
+          MC_CLIENT_URL=$(curl -s "$MC_VERSION_URL" | jq -r '.downloads.client.url')
+          curl -fsSL "$MC_CLIENT_URL" -o deps/minecraft.jar
+          curl -fsSL "https://maven.fabricmc.net/net/fabricmc/fabric-loader/0.19.2/fabric-loader-0.19.2.jar" -o deps/fabric-loader.jar
+          curl -fsSL "https://maven.fabricmc.net/net/fabricmc/sponge-mixin/0.17.2+mixin.0.8.7/sponge-mixin-0.17.2+mixin.0.8.7.jar" -o deps/sponge-mixin.jar
+          curl -fsSL "https://repo1.maven.org/maven2/org/slf4j/slf4j-api/2.0.17/slf4j-api-2.0.17.jar" -o deps/slf4j-api.jar
+
+      - name: Build
+        run: |
+          mkdir -p build/classes
+          javac --release 21 \
+            -cp "deps/minecraft.jar:deps/fabric-loader.jar:deps/sponge-mixin.jar:deps/slf4j-api.jar" \
+            -d build/classes \
+            src/main/java/net/berlogacraft/fabric/hdskins/mixin/SkinTextureDownloaderMixin.java
+          cp -r src/main/resources/. build/classes/
+          jar cf build/fabric-hd-skins.jar -C build/classes .
+
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build/fabric-hd-skins.jar
+          body: "Fabric HD Skins ${{ github.ref_name }} for Minecraft 26.1.2 + Fabric Loader 0.19.2"
